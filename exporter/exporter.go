@@ -46,6 +46,9 @@ type Exporter struct {
 	metricMapCounters map[string]string
 	metricMapGauges   map[string]string
 
+	// reservedMetricNames holds metric names module fields must not use.
+	reservedMetricNames map[string]bool
+
 	mux *http.ServeMux
 
 	buildInfo BuildInfo
@@ -367,51 +370,6 @@ func NewRedisExporter(uri string, opts Options) (*Exporter, error) {
 			"server_threads":        "server_threads_total",
 			"long_lock_waits":       "long_lock_waits_total",
 			"current_client_thread": "current_client_thread",
-
-			// Redis Modules metrics, RediSearch module
-			"search_number_of_indexes":   "search_number_of_indexes",
-			"search_used_memory_indexes": "search_used_memory_indexes_bytes",
-			"search_dialect_1":           "search_dialect_1",
-			"search_dialect_2":           "search_dialect_2",
-			"search_dialect_3":           "search_dialect_3",
-			"search_dialect_4":           "search_dialect_4",
-			// Legacy redis-stack v7.4 metrics
-			"search_global_idle":     "search_global_idle",
-			"search_global_total":    "search_global_total",
-			"search_bytes_collected": "search_collected_bytes",
-			// RediSearch module v8.0
-			"search_number_of_active_indexes":                 "search_number_of_active_indexes",
-			"search_number_of_active_indexes_running_queries": "search_number_of_active_indexes_running_queries",
-			"search_number_of_active_indexes_indexing":        "search_number_of_active_indexes_indexing",
-			"search_total_active_write_threads":               "search_total_active_write_threads",
-			"search_total_num_docs_in_indexes":                "search_total_num_docs_in_indexes",
-			"search_smallest_memory_index":                    "search_smallest_memory_index_bytes",
-			"search_largest_memory_index":                     "search_largest_memory_index_bytes",
-			"search_used_memory_vector_index":                 "search_used_memory_vector_index_bytes",
-			"search_global_idle_user":                         "search_global_idle_user",     // search_gc metrics were split into user and internal
-			"search_global_idle_internal":                     "search_global_idle_internal", // in PR: https://github.com/RediSearch/RediSearch/pull/5616
-			"search_global_total_user":                        "search_global_total_user",
-			"search_global_total_internal":                    "search_global_total_internal",
-			"search_gc_bytes_collected":                       "search_gc_collected_bytes", // search_bytes_collected was renamed in https://github.com/RediSearch/RediSearch/pull/5616
-			"search_gc_total_docs_not_collected":              "search_gc_total_docs_not_collected",
-			"search_gc_marked_deleted_vectors":                "search_gc_marked_deleted_vectors",
-			"search_errors_indexing_failures":                 "search_errors_indexing_failures",
-			// Valkey v8 metrics
-			"bf_bloom_total_memory_bytes":                "bf_bloom_total_memory_bytes",
-			"bf_bloom_num_objects":                       "bf_bloom_num_objects",
-			"bf_bloom_num_filters_across_objects":        "bf_bloom_num_filters_across_objects",
-			"bf_bloom_num_items_across_objects":          "bf_bloom_num_items_across_objects",
-			"bf_bloom_capacity_across_objects":           "bf_bloom_capacity_across_objects",
-			"json_total_memory_bytes":                    "json_total_memory_bytes",
-			"json_num_documents":                         "json_num_documents",
-			"search_used_memory_bytes":                   "search_used_memory_bytes",
-			"search_number_of_attributes":                "search_number_of_attributes",
-			"search_total_indexed_documents":             "search_total_indexed_documents",
-			"search_query_queue_size":                    "search_query_queue_size",
-			"search_writer_queue_size":                   "search_writer_queue_size",
-			"search_string_interning_store_size":         "search_string_interning_store_size",
-			"search_vector_externing_hash_extern_errors": "search_vector_externing_hash_extern_errors",
-			"search_vector_externing_num_lru_entries":    "search_vector_externing_num_lru_entries",
 		},
 
 		metricMapCounters: map[string]string{
@@ -477,43 +435,7 @@ func NewRedisExporter(uri string, opts Options) (*Exporter, error) {
 			"storage_provider_read_hits":   "storage_provider_read_hits",
 			"storage_provider_read_misses": "storage_provider_read_misses",
 
-			// Redis Modules metrics, RediSearch module
-			"search_total_indexing_time": "search_indexing_time_ms_total",
-			// Legacy redis-stack v7.4 metrics
-			"search_total_cycles": "search_cycles_total",
-			"search_total_ms_run": "search_run_ms_total",
-			// RediSearch module v8.0
-			"search_gc_total_cycles":               "search_gc_cycles_total", // search_gc metrics were renamed
-			"search_gc_total_ms_run":               "search_gc_run_ms_total", // in PR: https://github.com/RediSearch/RediSearch/pull/5616
-			"search_total_queries_processed":       "search_queries_processed_total",
-			"search_total_query_commands":          "search_query_commands_total",
-			"search_total_query_execution_time_ms": "search_query_execution_time_ms_total",
-			"search_total_active_queries":          "search_active_queries_total",
-			// Valkey v8 metrics
-			"bf_bloom_defrag_hits":                        "bf_bloom_defrag_hits_total",
-			"bf_bloom_defrag_misses":                      "bf_bloom_defrag_misses_total",
-			"search_worker_pool_suspend_cnt":              "search_worker_pool_suspend_count",
-			"search_writer_resumed_cnt":                   "search_writer_resumed_count",
-			"search_reader_resumed_cnt":                   "search_reader_resumed_count",
-			"search_writer_suspension_expired_cnt":        "search_writer_suspension_expired_count",
-			"search_rdb_load_success_cnt":                 "search_rdb_load_success_count",
-			"search_rdb_load_failure_cnt":                 "search_rdb_load_failure_count",
-			"search_rdb_save_success_cnt":                 "search_rdb_save_success_count",
-			"search_rdb_save_failure_cnt":                 "search_rdb_save_failure_count",
-			"search_successful_requests_count":            "search_successful_requests_count",
-			"search_failure_requests_count":               "search_failure_requests_count",
-			"search_hybrid_requests_count":                "search_hybrid_requests_count",
-			"search_inline_filtering_requests_count":      "search_inline_filtering_requests_count",
-			"search_hnsw_add_exceptions_count":            "search_hnsw_add_exceptions_count",
-			"search_hnsw_remove_exceptions_count":         "search_hnsw_remove_exceptions_count",
-			"search_hnsw_modify_exceptions_count":         "search_hnsw_modify_exceptions_count",
-			"search_hnsw_search_exceptions_count":         "search_hnsw_search_exceptions_count",
-			"search_hnsw_create_exceptions_count":         "search_hnsw_create_exceptions_count",
-			"search_vector_externing_entry_count":         "search_vector_externing_entry_count",
-			"search_vector_externing_generated_value_cnt": "search_vector_externing_generated_value_count",
-			"search_vector_externing_lru_promote_cnt":     "search_vector_externing_lru_promote_count",
-			"search_vector_externing_deferred_entry_cnt":  "search_vector_externing_deferred_entry_count",
-			"used_active_time_main_thread":                "active_time_main_thread_seconds_total",
+			"used_active_time_main_thread": "active_time_main_thread_seconds_total",
 		},
 	}
 
@@ -714,6 +636,8 @@ func NewRedisExporter(uri string, opts Options) (*Exporter, error) {
 		e.metricDescriptionLabels[k] = desc.lbls
 	}
 
+	e.reservedMetricNames = e.buildReservedMetricNames()
+
 	if e.options.MetricsPath == "" {
 		e.options.MetricsPath = "/metrics"
 	}
@@ -763,6 +687,19 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	for _, v := range e.metricMapCounters {
 		if _, described := e.metricDescriptions[v]; !described {
 			ch <- newMetricDescr(e.options.Namespace, v, v+" metric", nil)
+		}
+	}
+
+	for _, name := range moduleMetricRenames {
+		if _, described := e.metricDescriptions[name]; !described {
+			ch <- newMetricDescr(e.options.Namespace, name, name+" metric", nil)
+		}
+	}
+
+	for field := range moduleMetricTypes {
+		name := moduleMetricName(field)
+		if _, described := e.metricDescriptions[name]; !described {
+			ch <- newMetricDescr(e.options.Namespace, name, name+" metric", nil)
 		}
 	}
 

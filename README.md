@@ -389,6 +389,12 @@ The metric `redis_memory_max_bytes`  will show the maximum number of bytes Redis
 It is zero if no memory limit is set for the Redis instance you're scraping (this is the default setting for Redis).\
 You can confirm that's the case by checking if the metric `redis_config_maxmemory` is zero or by connecting to the Redis instance via redis-cli and running the command `CONFIG GET MAXMEMORY`.
 
+### Module metrics
+
+With `--include-modules-metrics`, every numeric field from `INFO MODULES` is exported under its own name, for example `redis_search_number_of_indexes` or `redis_bf_bloom_num_objects`. A field ending in `_total`, `_count` or `_cnt` is a counter (only exported when its value is finite and not negative), all others are gauges. Strings, nested values and `*_human` fields are skipped, as are fields whose name is already used by another metric. A few fields keep a fixed name or type for compatibility, for example `search_total_queries_processed` is exported as `redis_search_queries_processed_total`.
+
+Module authors choose their own field names, so the counter/gauge choice can be wrong. Use Prometheus `metric_relabel_configs` to rename or drop unwanted series.
+
 
 ## What it looks like
 

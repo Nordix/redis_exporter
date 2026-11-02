@@ -38,6 +38,18 @@ func (e *Exporter) includeMetric(s string) bool {
 	return ok
 }
 
+// parseMetricValue converts an INFO field value to a float. Status words are
+// mapped to 1 (ok, true) and 0 (err, fail, false); anything else must be numeric.
+func parseMetricValue(fieldValue string) (float64, error) {
+	switch fieldValue {
+	case "ok", "true":
+		return 1, nil
+	case "err", "fail", "false":
+		return 0, nil
+	}
+	return strconv.ParseFloat(fieldValue, 64)
+}
+
 func (e *Exporter) parseAndRegisterConstMetric(ch chan<- prometheus.Metric, fieldKey, fieldValue string) {
 	if matches := activeTimeIOThreadRE.FindStringSubmatch(fieldKey); matches != nil {
 		val, err := strconv.ParseFloat(fieldValue, 64)
@@ -60,21 +72,7 @@ func (e *Exporter) parseAndRegisterConstMetric(ch chan<- prometheus.Metric, fiel
 		}
 	}
 
-	var err error
-	var val float64
-
-	switch fieldValue {
-
-	case "ok", "true":
-		val = 1
-
-	case "err", "fail", "false":
-		val = 0
-
-	default:
-		val, err = strconv.ParseFloat(fieldValue, 64)
-
-	}
+	val, err := parseMetricValue(fieldValue)
 	if err != nil {
 		log.Debugf("couldn't parse %s, err: %s", fieldValue, err)
 		return
